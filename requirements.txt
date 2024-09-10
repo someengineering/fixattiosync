@@ -1,0 +1,16 @@
+certifi==2024.8.30
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
+idna==3.8
+    # via requests
+psycopg[binary]==3.2.1
+    # via fixattiosync (pyproject.toml)
+psycopg-binary==3.2.1
+    # via psycopg
+requests==2.32.3
+    # via fixattiosync (pyproject.toml)
+typing-extensions==4.12.2
+    # via psycopg
+urllib3==2.2.2
+    # via requests
