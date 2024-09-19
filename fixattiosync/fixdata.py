@@ -1,22 +1,24 @@
 import os
 import psycopg
 from psycopg.rows import dict_row
+from uuid import UUID
 from argparse import ArgumentParser
 from .logger import log
 from .fixresources import FixUser, FixWorkspace
+from typing import Optional
 
 
 class FixData:
-    def __init__(self, db, user, password, host="localhost", port=5432):
+    def __init__(self, db: str, user: str, password: str, host: str = "localhost", port: int = 5432) -> None:
         self.db = db
         self.user = user
         self.password = password
         self.host = host
         self.port = port
-        self.conn = None
+        self.conn: Optional[psycopg.Connection] = None
         self.hydrated = False
-        self.__workspaces = {}
-        self.__users = {}
+        self.__workspaces: dict[UUID, FixWorkspace] = {}
+        self.__users: dict[UUID, FixUser] = {}
 
     @property
     def users(self) -> list[FixUser]:
@@ -30,7 +32,7 @@ class FixData:
             self.hydrate()
         return list(self.__workspaces.values())
 
-    def connect(self):
+    def connect(self) -> None:
         log.debug("Connecting to the database")
         if self.conn is None:
             try:
@@ -42,7 +44,7 @@ class FixData:
                 log.error(f"Error connecting to the database: {e}")
                 self.conn = None
 
-    def hydrate(self):
+    def hydrate(self) -> None:
         if self.conn is None:
             self.connect()
 
@@ -81,7 +83,7 @@ class FixData:
             log.debug(f"Found {len(self.__users)} users in database")
             self.hydrated = True
 
-    def close(self):
+    def close(self) -> None:
         if self.conn is not None:
             log.debug("Closing database connection")
             self.conn.close()

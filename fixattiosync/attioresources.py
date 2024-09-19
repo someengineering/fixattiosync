@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
-from typing import Optional, Self, Type, ClassVar
+from typing import Optional, Self, Type, ClassVar, Any
 from .logger import log
 
 
-def get_latest_value(value: list[dict]) -> dict:
+def get_latest_value(value: list[dict[str, Any]]) -> dict[str, Any]:
     if value and len(value) > 0:
         return value[0]
     return {}
@@ -33,7 +33,7 @@ class AttioResource(ABC):
 
     @classmethod
     @abstractmethod
-    def make(cls: Type[Self], data: dict) -> Self:
+    def make(cls: Type[Self], data: dict[str, Any]) -> Self:
         pass
 
 
@@ -48,11 +48,13 @@ class AttioWorkspace(AttioResource):
     fix_workspace_id: Optional[UUID]
     users: list[AttioUser] = field(default_factory=list)
 
-    def __eq__(self, other):
-        return self.id == other.id and self.tier == other.tier
+    def __eq__(self: Self, other: Any) -> bool:
+        if not hasattr(other, "id") or not hasattr(other, "tier"):
+            return False
+        return bool(self.id == other.id and self.tier == other.tier)
 
     @classmethod
-    def make(cls: Type[Self], data: dict) -> Self:
+    def make(cls: Type[Self], data: dict[str, Any]) -> Self:
         object_id = UUID(data["id"]["object_id"])
         record_id = UUID(data["id"]["record_id"])
         workspace_id = UUID(data["id"]["workspace_id"])
@@ -70,7 +72,7 @@ class AttioWorkspace(AttioResource):
         status = status_info.get("status", {}).get("title")
 
         fix_workspace_id_info = get_latest_value(values.get("workspace_id", [{}]))
-        fix_workspace_id = optional_uuid(fix_workspace_id_info.get("value"))
+        fix_workspace_id = optional_uuid(str(fix_workspace_id_info.get("value")))
         if fix_workspace_id is None:
             log.error(f"Fix workspace ID not found for {record_id}: {data}")
 
@@ -102,7 +104,7 @@ class AttioPerson(AttioResource):
     users: list[AttioUser] = field(default_factory=list)
 
     @classmethod
-    def make(cls: Type[Self], data: dict) -> Self:
+    def make(cls: Type[Self], data: dict[str, Any]) -> Self:
         object_id = UUID(data["id"]["object_id"])
         record_id = UUID(data["id"]["record_id"])
         workspace_id = UUID(data["id"]["workspace_id"])
@@ -137,7 +139,7 @@ class AttioPerson(AttioResource):
             "linkedin": linkedin,
         }
 
-        return cls(**cls_data)
+        return cls(**cls_data)  # type: ignore
 
 
 @dataclass
@@ -155,11 +157,13 @@ class AttioUser(AttioResource):
     person: Optional[AttioPerson] = None
     workspaces: list[AttioWorkspace] = field(default_factory=list)
 
-    def __eq__(self, other):
-        return self.id == other.id and self.email.lower() == other.email.lower()
+    def __eq__(self: Self, other: Any) -> bool:
+        if not hasattr(other, "id") or not hasattr(other, "email"):
+            return False
+        return bool(self.id == other.id and str(self.email).lower() == str(other.email).lower())
 
     @classmethod
-    def make(cls: Type[Self], data: dict) -> Self:
+    def make(cls: Type[Self], data: dict[str, Any]) -> Self:
         object_id = UUID(data["id"]["object_id"])
         record_id = UUID(data["id"]["record_id"])
         workspace_id = UUID(data["id"]["workspace_id"])
@@ -179,21 +183,21 @@ class AttioUser(AttioResource):
             log.error(f"Fix user ID not found for {record_id}: {data}")
 
         person_info = get_latest_value(values.get("person", [{}]))
-        person_id = optional_uuid(person_info.get("target_record_id"))
+        person_id = optional_uuid(str(person_info.get("target_record_id")))
 
         workspace_refs = None
         workspace_info = values.get("workspace", [])
         for workspace in workspace_info:
-            workspace_ref = optional_uuid(workspace.get("target_record_id"))
+            workspace_ref = optional_uuid(str(workspace.get("target_record_id")))
             if workspace_refs is None:
                 workspace_refs = []
             workspace_refs.append(workspace_ref)
 
         cls_data = {
-            "id": user_id,
             "object_id": object_id,
             "record_id": record_id,
             "workspace_id": workspace_id,
+            "id": user_id,
             "created_at": created_at,
             "demo_workspace_viewed": None,
             "email": primary_email_address,
@@ -206,7 +210,7 @@ class AttioUser(AttioResource):
 
         return cls(**cls_data)
 
-    def create_or_update(self) -> tuple[str, dict]:
+    def create_or_update(self) -> tuple[str, dict[str, Any]]:
         data = {
             "values": {
                 "primary_email_address": [{"email_address": self.email}],

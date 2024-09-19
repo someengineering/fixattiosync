@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Self, Any
 from .attioresources import AttioPerson, AttioWorkspace
 
 
@@ -20,15 +20,17 @@ class FixUser:
     updated_at: datetime
     workspaces: list[FixWorkspace] = field(default_factory=list)
 
-    def __eq__(self, other):
-        return self.id == other.id and self.email.lower() == other.email.lower()
+    def __eq__(self: Self, other: Any) -> bool:
+        if not hasattr(other, "id") or not hasattr(other, "email"):
+            return False
+        return bool(self.id == other.id and str(self.email).lower() == str(other.email).lower())
 
     def attio_data(
         self, person: Optional[AttioPerson] = None, workspaces: Optional[list[AttioWorkspace]] = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         object_id = "users"
         matching_attribute = "user_id"
-        data = {
+        data: dict[str, Any] = {
             "data": {
                 "values": {
                     "user_id": str(self.id),
@@ -58,10 +60,10 @@ class FixUser:
             "data": data,
         }
 
-    def attio_person(self) -> dict:
+    def attio_person(self) -> dict[str, Any]:
         object_id = "people"
         matching_attribute = "email_addresses"
-        data = {"data": {"values": {"email_addresses": [{"email_address": self.email}]}}}
+        data: dict[str, Any] = {"data": {"values": {"email_addresses": [{"email_address": self.email}]}}}
         return {
             "object_id": object_id,
             "matching_attribute": matching_attribute,
@@ -87,13 +89,15 @@ class FixWorkspace:
     owner: Optional[FixUser] = None
     users: list[FixUser] = field(default_factory=list)
 
-    def __eq__(self, other):
-        return self.id == other.id and self.name == other.name and self.tier == other.tier
+    def __eq__(self: Self, other: Any) -> bool:
+        if not hasattr(other, "id") or not hasattr(other, "name") or not hasattr(other, "tier"):
+            return False
+        return bool(self.id == other.id and self.name == other.name and self.tier == other.tier)
 
-    def attio_data(self) -> dict:
+    def attio_data(self) -> dict[str, Any]:
         object_id = "workspaces"
         matching_attribute = "workspace_id"
-        data = {
+        data: dict[str, Any] = {
             "data": {
                 "values": {
                     "workspace_id": str(self.id),

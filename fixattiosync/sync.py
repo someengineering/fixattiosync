@@ -1,8 +1,9 @@
+from typing import Optional
 from .logger import log
 from .attiodata import AttioData
 from .fixdata import FixData
 from .fixresources import FixUser, FixWorkspace
-from .attioresources import AttioUser, AttioWorkspace
+from .attioresources import AttioUser, AttioWorkspace, AttioPerson
 
 
 def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
@@ -13,24 +14,32 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
     users_outdated = users_outdated_in_attio(fix, attio)
     workspaces_outdated = workspaces_outdated_in_attio(fix, attio)
 
+    attio_user: Optional[AttioUser]
+    attio_person: Optional[AttioPerson]
+    attio_workspace: Optional[AttioWorkspace]
+
     for fix_workspace in workspaces_missing:
         log.info(f"Creating workspace {fix_workspace.name}")
         try:
-            attio.assert_record(**fix_workspace.attio_data())
+            attio_workspace = attio.assert_record(**fix_workspace.attio_data())  # type: ignore
+            assert isinstance(attio_workspace, AttioWorkspace)
         except Exception as e:
             log.error(f"Error creating workspace {fix_workspace.name}: {e}")
 
     for fix_workspace in workspaces_outdated:
         log.info(f"Updating workspace {fix_workspace.name}")
         try:
-            attio.assert_record(**fix_workspace.attio_data())
+            attio_workspace = attio.assert_record(**fix_workspace.attio_data())  # type: ignore
+            assert isinstance(attio_workspace, AttioWorkspace)
         except Exception as e:
             log.error(f"Error updating workspace {fix_workspace.name}: {e}")
 
     for user in users_missing:
         log.info(f"Asserting person {user.email}")
         try:
-            attio_person = attio.assert_record(**user.attio_person())
+            attio_person = attio.assert_record(**user.attio_person())  # type: ignore
+            assert isinstance(attio_person, AttioPerson)
+
             workspace_ids = [workspace.id for workspace in user.workspaces]
             attio_workspaces = [
                 attio_workspace
@@ -38,7 +47,9 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
                 if attio_workspace.fix_workspace_id in workspace_ids
             ]
             try:
-                attio_user = attio.assert_record(**user.attio_data(attio_person, attio_workspaces))
+                attio_user = attio.assert_record(**user.attio_data(attio_person, attio_workspaces))  # type: ignore
+                assert isinstance(attio_user, AttioUser)
+
                 attio_user.person = attio_person
                 attio_person.users.append(attio_user)
                 attio_user.workspaces.extend(attio_workspaces)
@@ -65,9 +76,18 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
             attio_workspace for attio_workspace in attio.workspaces if attio_workspace.fix_workspace_id in workspace_ids
         ]
         try:
-            attio_user = attio.assert_record(**user.attio_data(attio_person, attio_workspaces))
+            attio_user = attio.assert_record(**user.attio_data(attio_person, attio_workspaces))  # type: ignore
+            assert isinstance(attio_user, AttioUser)
         except Exception as e:
             log.error(f"Error updating user {user.email}: {e}")
+
+    for attio_workspace in obsolete_workspaces:
+        log.info(f"Deleting workspace {attio_workspace.name} ({attio_workspace.fix_workspace_id})")
+        # todo: delete workspace
+
+    for attio_user in obsolete_users:
+        log.info(f"Deleting user {attio_user.email} ({attio_user.user_id})")
+        # todo: delete user
 
 
 def workspaces_missing_in_attio(fix: FixData, attio: AttioData) -> list[FixWorkspace]:

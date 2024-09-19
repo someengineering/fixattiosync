@@ -4,7 +4,6 @@ from .args import parse_args
 from .fixdata import FixData, add_args as fixdata_add_args
 from .attiodata import AttioData, add_args as attio_add_args
 from .sync import sync_fix_to_attio
-from pprint import pprint
 
 
 def main() -> None:
