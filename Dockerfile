@@ -74,5 +74,5 @@ RUN groupadd -g "${PGID:-0}" -o fix \
     && dnf clean all \
     && rm -rf /var/cache/dnf /tmp/* /var/tmp/*
 
-ENTRYPOINT ["/bin/dumb-init", "--", "/usr/local/sbin/bootstrap"]
-CMD ["/usr/local/bin/fixattiosync"]
+ENTRYPOINT ["/bin/dumb-init", "--", "/usr/local/sbin/bootstrap", "/usr/local/bin/fixattiosync"]
+CMD []
