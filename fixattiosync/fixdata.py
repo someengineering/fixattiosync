@@ -82,6 +82,9 @@ class FixData:
                 self.close()
             log.debug(f"Found {len(self.__workspaces)} workspaces in database")
             log.debug(f"Found {len(self.__users)} users in database")
+            if len(self.__users) == 0 or len(self.__workspaces) == 0:
+                log.fatal("No data found in Fix database")
+                sys.exit(2)
             self.hydrated = True
 
     def close(self) -> None:

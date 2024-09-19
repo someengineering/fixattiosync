@@ -1,3 +1,4 @@
+import sys
 import os
 import requests
 from uuid import UUID
@@ -118,6 +119,9 @@ class AttioData:
         self.__people = self.__marshal(self._records("people"), AttioPerson)  # type: ignore
         self.__users = self.__marshal(self._records("users"), AttioUser)  # type: ignore
         self.__connect()
+        if len(self.__workspaces) == 0 or len(self.__people) == 0 or len(self.__users) == 0:
+            log.fatal("No data found in Attio")
+            sys.exit(3)
         self.hydrated = True
 
     def __connect(self) -> None:
