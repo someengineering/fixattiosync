@@ -1,4 +1,7 @@
+import sys
+import math
 from typing import Optional
+from argparse import ArgumentParser
 from .logger import log
 from .attiodata import AttioData
 from .fixdata import FixData
@@ -6,7 +9,7 @@ from .fixresources import FixUser, FixWorkspace
 from .attioresources import AttioUser, AttioWorkspace, AttioPerson
 
 
-def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
+def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int = 10) -> None:
     workspaces_missing = workspaces_missing_in_attio(fix, attio)
     users_missing = users_missing_in_attio(fix, attio)
     obsolete_workspaces = workspaces_no_longer_in_fix(fix, attio)
@@ -14,6 +17,24 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData) -> None:
     users_outdated = users_outdated_in_attio(fix, attio)
     workspaces_outdated = workspaces_outdated_in_attio(fix, attio)
 
+    # Sanity check
+    delta_percent_missing = (
+        (len(workspaces_missing) + len(users_missing)) / (len(attio.users) + len(attio.workspaces)) * 100
+    )
+    delta_percent_outdated = (
+        (len(users_outdated) + len(workspaces_outdated)) / (len(attio.users) + len(attio.workspaces)) * 100
+    )
+
+    if delta_percent_missing > max_changes_percent or delta_percent_outdated > max_changes_percent:
+        min_required_threshold = math.ceil(max(delta_percent_missing, delta_percent_outdated))
+        log.fatal(
+            f"Data changes exceed the threshold of {max_changes_percent}%:"
+            f" Missing: {delta_percent_missing:.2f}%, Outdated: {delta_percent_outdated:.2f}%"
+            f" - run with `--modification-threshold {min_required_threshold}` or higher to apply all changes!"
+        )
+        sys.exit(1)
+
+    # Sync data
     attio_user: Optional[AttioUser]
     attio_person: Optional[AttioPerson]
     attio_workspace: Optional[AttioWorkspace]
@@ -178,3 +199,13 @@ def workspaces_outdated_in_attio(fix: FixData, attio: AttioData) -> list[FixWork
     log.debug(f"Number of outdated workspaces in Attio: {len(outdated)}")
 
     return [fix_workspace for fix_workspace in fix.workspaces if fix_workspace.id in outdated]
+
+
+def add_args(arg_parser: ArgumentParser) -> None:
+    arg_parser.add_argument(
+        "--modification-threshold",
+        dest="modification_threshold",
+        help="Max. data changes to allow in percent (default: 10)",
+        type=int,
+        default=10,
+    )
