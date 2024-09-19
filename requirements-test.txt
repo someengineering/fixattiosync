@@ -105,7 +105,7 @@ typing-extensions==4.12.2
     # via
     #   mypy
     #   psycopg
-urllib3==2.2.2
+urllib3==2.2.3
     # via requests
 virtualenv==20.26.4
     # via tox

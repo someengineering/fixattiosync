@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fixbackup = "fixbackup.__main__:main"
+fixattiosync = "fixattiosync.__main__:main"
 
 [project.optional-dependencies]
 test = [
