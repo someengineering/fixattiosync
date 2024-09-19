@@ -33,7 +33,7 @@ class FixData:
         return list(self.__workspaces.values())
 
     def connect(self) -> None:
-        log.debug("Connecting to the database")
+        log.debug(f"Connecting to database {self.db} on {self.host}:{self.port} as {self.user}")
         if self.conn is None:
             try:
                 self.conn = psycopg.connect(
@@ -90,13 +90,17 @@ class FixData:
 
 
 def add_args(arg_parser: ArgumentParser) -> None:
-    arg_parser.add_argument("--db", dest="db", help="Database name", default="fix-database")
-    arg_parser.add_argument("--user", dest="user", help="Database user", default="fixuser")
+    arg_parser.add_argument(
+        "--db", dest="db", help="Database name", default=os.environ.get("PGDATABASE", "fix-database")
+    )
+    arg_parser.add_argument("--user", dest="user", help="Database user", default=os.environ.get("PGUSER", "fixuser"))
     arg_parser.add_argument(
         "--password",
         dest="password",
         help="Database password",
         default=os.environ.get("PGPASSWORD", None),
     )
-    arg_parser.add_argument("--host", dest="host", help="Database host", default="localhost")
-    arg_parser.add_argument("--port", dest="port", help="Database port", default=5432, type=int)
+    arg_parser.add_argument("--host", dest="host", help="Database host", default=os.environ.get("PGHOST", "localhost"))
+    arg_parser.add_argument(
+        "--port", dest="port", help="Database port", default=os.environ.get("PGPORT", 5432), type=int
+    )
