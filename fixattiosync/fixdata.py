@@ -1,4 +1,5 @@
 import os
+import sys
 import psycopg
 from psycopg.rows import dict_row
 from uuid import UUID
@@ -42,7 +43,7 @@ class FixData:
                 log.debug("Connection successful")
             except psycopg.DatabaseError as e:
                 log.error(f"Error connecting to the database: {e}")
-                self.conn = None
+                sys.exit(2)
 
     def hydrate(self) -> None:
         if self.conn is None:
@@ -76,7 +77,7 @@ class FixData:
                         self.__users[row["user_id"]].workspaces.append(self.__workspaces[row["organization_id"]])
             except psycopg.Error as e:
                 log.error(f"Error fetching data: {e}")
-                return None
+                sys.exit(2)
             finally:
                 self.close()
             log.debug(f"Found {len(self.__workspaces)} workspaces in database")
