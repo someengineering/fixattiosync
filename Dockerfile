@@ -34,6 +34,8 @@ RUN . /usr/local/fix-venv-python3/bin/activate && python -m pip install -U pip w
 
 # Build Fix Inventory
 COPY . /usr/src/fixattiosync
+COPY fixattiosync-shim /usr/local/bin/fixattiosync
+RUN chmod 755 /usr/local/bin/fixattiosync
 
 WORKDIR /usr/src/fixattiosync
 RUN . /usr/local/fix-venv-python3/bin/activate && pip install -r requirements.txt
@@ -59,6 +61,7 @@ RUN groupadd -g "${PGID:-0}" -o fix \
     && dnf -y update \
     && dnf -y install \
         dumb-init \
+        util-linux \
         python3 \
         python3-pip \
         iproute \
