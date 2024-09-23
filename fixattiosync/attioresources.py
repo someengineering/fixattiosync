@@ -230,12 +230,3 @@ class AttioUser(AttioResource):
         }
 
         return cls(**cls_data)
-
-    def create_or_update(self) -> tuple[str, dict[str, Any]]:
-        data = {
-            "values": {
-                "primary_email_address": [{"email_address": self.email}],
-                "user_id": [{"value": str(self.id)}],
-            }
-        }
-        return f"objects/users/records?matching_attribute={self.id}", data
