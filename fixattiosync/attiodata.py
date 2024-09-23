@@ -44,7 +44,7 @@ class AttioData:
             "PUT": "Putting data to",
             "GET": "Fetching data from",
         }
-        action_str = action_strings.get(method.upper(), "Requesting data from")
+        action_str = action_strings.get(method.upper(), f"Requesting data via {method} from")
 
         log.debug(f"{action_str} {url}")
         response = requests.request(method, url, headers=headers, json=json, params=params)
