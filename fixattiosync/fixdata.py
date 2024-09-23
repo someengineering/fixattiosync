@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 from uuid import UUID
 from argparse import ArgumentParser
 from .logger import log
-from .fixresources import FixUser, FixWorkspace
+from .fixresources import FixUser, FixWorkspace, FixCloudAccount
 from typing import Optional
 
 
@@ -20,6 +20,7 @@ class FixData:
         self.hydrated = False
         self.__workspaces: dict[UUID, FixWorkspace] = {}
         self.__users: dict[UUID, FixUser] = {}
+        self.__cloud_accounts: dict[UUID, FixCloudAccount] = {}
 
     @property
     def users(self) -> list[FixUser]:
@@ -75,6 +76,17 @@ class FixData:
                     for row in rows:
                         self.__workspaces[row["organization_id"]].users.append(self.__users[row["user_id"]])
                         self.__users[row["user_id"]].workspaces.append(self.__workspaces[row["organization_id"]])
+                with self.conn.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute('SELECT * FROM public."cloud_account";')
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        cloud_account = FixCloudAccount(**row)
+                        self.__cloud_accounts[cloud_account.id] = cloud_account
+                        if cloud_account.tenant_id in self.__workspaces:
+                            self.__workspaces[cloud_account.tenant_id].cloud_accounts.append(cloud_account)
+                            self.__workspaces[cloud_account.tenant_id].update_status()
+                        else:
+                            log.error(f"Data error: cloud account {cloud_account.id} does not have a workspace")
             except psycopg.Error as e:
                 log.error(f"Error fetching data: {e}")
                 sys.exit(2)
@@ -82,6 +94,7 @@ class FixData:
                 self.close()
             log.debug(f"Found {len(self.__workspaces)} workspaces in database")
             log.debug(f"Found {len(self.__users)} users in database")
+            log.debug(f"Found {len(self.__cloud_accounts)} cloud accounts in database")
             if len(self.__users) == 0 or len(self.__workspaces) == 0:
                 log.fatal("No data found in Fix database")
                 sys.exit(2)

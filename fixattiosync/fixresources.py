@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional, Self, Any
+from enum import Enum
 from .attioresources import AttioPerson, AttioWorkspace
 
 
@@ -71,6 +72,14 @@ class FixUser:
         }
 
 
+class FixWorkspaceStatus(Enum):
+    Created = "Created"
+    Configured = "Configured"
+    Collected = "Collected"
+    Subscribed = "Subscribed"
+    Unsubscribed = "Unsubscribed"
+
+
 @dataclass
 class FixWorkspace:
     id: UUID
@@ -88,11 +97,32 @@ class FixWorkspace:
     tier_updated_at: Optional[datetime]
     owner: Optional[FixUser] = None
     users: list[FixUser] = field(default_factory=list)
+    cloud_accounts: list[FixCloudAccount] = field(default_factory=list)
+    status: FixWorkspaceStatus = FixWorkspaceStatus.Created
 
     def __eq__(self: Self, other: Any) -> bool:
-        if not hasattr(other, "id") or not hasattr(other, "name") or not hasattr(other, "tier"):
+        if (
+            not hasattr(other, "id")
+            or not hasattr(other, "name")
+            or not hasattr(other, "tier")
+            or not hasattr(other, "status")
+        ):
             return False
-        return bool(self.id == other.id and self.name == other.name and self.tier == other.tier)
+        return bool(
+            self.id == other.id
+            and self.name == other.name
+            and self.tier == other.tier
+            and self.status.value == other.status
+        )
+
+    def update_status(self) -> None:
+        if self.subscription_id is not None:
+            self.status = FixWorkspaceStatus.Subscribed
+            return
+        if any(cloud_account.is_configured for cloud_account in self.cloud_accounts):
+            self.status = FixWorkspaceStatus.Configured
+        if any(cloud_account.last_scan_resources_scanned > 0 for cloud_account in self.cloud_accounts):
+            self.status = FixWorkspaceStatus.Collected
 
     def attio_data(self) -> dict[str, Any]:
         object_id = "workspaces"
@@ -103,6 +133,7 @@ class FixWorkspace:
                     "workspace_id": str(self.id),
                     "name": self.name,
                     "product_tier": self.tier,
+                    "status": self.status.value,
                 }
             }
         }
@@ -111,3 +142,36 @@ class FixWorkspace:
             "matching_attribute": matching_attribute,
             "data": data,
         }
+
+
+@dataclass
+class FixCloudAccount:
+    id: UUID
+    tenant_id: UUID
+    cloud: str
+    account_id: str
+    aws_role_name: Optional[str]
+    aws_external_id: Optional[UUID]
+    is_configured: bool
+    enabled: bool
+    privileged: bool
+    user_account_name: Optional[str]
+    api_account_name: Optional[str]
+    api_account_alias: Optional[str]
+    state: Optional[str]
+    error: Optional[str]
+    last_scan_duration_seconds: int
+    last_scan_started_at: Optional[datetime]
+    last_scan_resources_scanned: int
+    created_at: datetime
+    updated_at: datetime
+    state_updated_at: datetime
+    version_id: int
+    cf_stack_version: Optional[int]
+    scan: bool
+    failed_scan_count: int
+    gcp_service_account_key_id: Optional[UUID]
+    last_task_id: Optional[str]
+    azure_credential_id: Optional[UUID]
+    last_scan_resources_errors: int
+    last_degraded_scan_started_at: Optional[datetime]
