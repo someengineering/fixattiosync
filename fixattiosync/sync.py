@@ -104,11 +104,24 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
 
     for attio_workspace in obsolete_workspaces:
         log.info(f"Deleting workspace {attio_workspace.name} ({attio_workspace.fix_workspace_id})")
-        # todo: delete workspace
+        try:
+            attio.delete_record(attio_workspace.api_object, attio_workspace.record_id)
+        except Exception as e:
+            log.error(f"Error deleting workspace {attio_workspace.name} ({attio_workspace.fix_workspace_id}): {e}")
 
     for attio_user in obsolete_users:
         log.info(f"Deleting user {attio_user.email} ({attio_user.user_id})")
-        # todo: delete user
+        try:
+            attio_person = attio_user.person
+            attio.delete_record(attio_user.api_object, attio_user.record_id)
+            if len(attio_person.users) == 0:
+                log.info(f"Deleting person {attio_person.email} ({attio_person.record_id}) with no users")
+                try:
+                    attio.delete_record(attio_person.api_object, attio_person.record_id)
+                except Exception as e:
+                    log.error(f"Error deleting person {attio_person.email} ({attio_person.record_id}): {e}")
+        except Exception as e:
+            log.error(f"Error deleting user {attio_user.email} ({attio_user.user_id}): {e}")
 
 
 def workspaces_missing_in_attio(fix: FixData, attio: AttioData) -> list[FixWorkspace]:

@@ -18,19 +18,35 @@ class AttioData:
         self.__people: dict[UUID, AttioPerson] = {}
         self.__users: dict[UUID, AttioUser] = {}
 
-    def _headers(self) -> dict[str, str]:
-        return {
+    def _headers(self, json: bool = False) -> dict[str, str]:
+        headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        if json:
+            headers["Content-Type"] = "application/json"
+
+        return headers
+
+    def _delete_data(
+        self, endpoint: str, json: Optional[dict[str, Any]] = None, params: Optional[dict[str, str]] = None
+    ) -> dict[str, Any]:
+        log.debug(f"Deleting data from {endpoint}")
+        url = self.base_url + endpoint
+        headers = self._headers(json=True) if json else self._headers(json=False)
+        response = requests.delete(url, headers=headers, json=json, params=params)
+        if response.status_code == 200:
+            return response.json()  # type: ignore
+        else:
+            raise Exception(f"Error deleting data from {url}: {response.status_code} {response.text}")
 
     def _post_data(
         self, endpoint: str, json: Optional[dict[str, Any]] = None, params: Optional[dict[str, str]] = None
     ) -> dict[str, Any]:
         log.debug(f"Fetching data from {endpoint}")
         url = self.base_url + endpoint
-        response = requests.post(url, headers=self._headers(), json=json, params=params)
+        headers = self._headers(json=True) if json else self._headers(json=False)
+        response = requests.post(url, headers=headers, json=json, params=params)
         if response.status_code == 200:
             return response.json()  # type: ignore
         else:
@@ -41,11 +57,37 @@ class AttioData:
     ) -> dict[str, Any]:
         log.debug(f"Putting data to {endpoint}")
         url = self.base_url + endpoint
-        response = requests.put(url, headers=self._headers(), json=json, params=params)
+        headers = self._headers(json=True) if json else self._headers(json=False)
+        response = requests.put(url, headers=headers, json=json, params=params)
         if response.status_code == 200:
             return response.json()  # type: ignore
         else:
             raise Exception(f"Error putting data to {url}: {response.status_code} {response.text}")
+
+    def delete_record(self, object_id: str, record_id: UUID) -> dict[str, Any]:
+        endpoint = f"objects/{object_id}/records/{record_id}"
+        match object_id:
+            case "users":
+                self_store = self.__users
+            case "people":
+                self_store = self.__people  # type: ignore
+            case "workspaces":
+                self_store = self.__workspaces  # type: ignore
+            case _:
+                raise ValueError(f"Unknown object_id: {object_id}")
+
+        response = self._delete_data(endpoint)
+        if record_id in self_store:
+            log.debug(f"Deleted {object_id} {record_id} in Attio, updating locally")
+            attio_obj = self_store[record_id]
+            if object_id == "users":
+                attio_obj.person.users.remove(attio_obj)
+                for workspace in attio_obj.workspaces:
+                    workspace.users.remove(attio_obj)
+            del self_store[record_id]
+        else:
+            log.error(f"Deleted {object_id} {record_id} in Attio, not found locally")
+        return response
 
     def assert_record(
         self, object_id: str, matching_attribute: str, data: dict[str, Any]
