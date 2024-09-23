@@ -1,6 +1,6 @@
 [project]
 name = "fixattiosync"
-version = "0.0.11"
+version = "0.0.12"
 authors = [{name="Some Engineering Inc."}]
 description = "Fix Attio Sync"
 license = {file="LICENSE"}
@@ -14,7 +14,7 @@ classifiers = [
     # License information
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     # Supported python versions
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.12",
     # Supported OS's
     "Operating System :: POSIX :: Linux",
     "Operating System :: Unix",
@@ -48,6 +48,7 @@ test = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-runner",
+    "pytest-mock",
     "tox",
     "wheel",
 ]
