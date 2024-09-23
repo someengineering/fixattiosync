@@ -25,6 +25,7 @@ def optional_uuid(value: str) -> Optional[UUID]:
 @dataclass
 class AttioResource(ABC):
     matching_attribute: ClassVar[str] = "record_id"
+    api_object: ClassVar[str] = ""
 
     object_id: UUID
     record_id: UUID
@@ -40,6 +41,7 @@ class AttioResource(ABC):
 @dataclass
 class AttioWorkspace(AttioResource):
     matching_attribute: ClassVar[str] = "workspace_id"
+    api_object: ClassVar[str] = "workspaces"
 
     id: Optional[UUID]
     name: Optional[str]
@@ -94,6 +96,7 @@ class AttioWorkspace(AttioResource):
 @dataclass
 class AttioPerson(AttioResource):
     matching_attribute: ClassVar[str] = "email_addresses"
+    api_object: ClassVar[str] = "people"
 
     full_name: Optional[str]
     first_name: Optional[str]
@@ -145,6 +148,7 @@ class AttioPerson(AttioResource):
 @dataclass
 class AttioUser(AttioResource):
     matching_attribute: ClassVar[str] = "user_id"
+    api_object: ClassVar[str] = "users"
 
     id: Optional[UUID]
     demo_workspace_viewed: Optional[bool]
