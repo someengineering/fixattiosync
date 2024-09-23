@@ -24,8 +24,13 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
     delta_percent_outdated = (
         (len(users_outdated) + len(workspaces_outdated)) / (len(attio.users) + len(attio.workspaces)) * 100
     )
+    delta_obsolete = (len(obsolete_workspaces) + len(obsolete_users)) / (len(attio.users) + len(attio.workspaces)) * 100
 
-    if delta_percent_missing > max_changes_percent or delta_percent_outdated > max_changes_percent:
+    if (
+        delta_percent_missing > max_changes_percent
+        or delta_percent_outdated > max_changes_percent
+        or delta_obsolete > max_changes_percent
+    ):
         min_required_threshold = math.ceil(max(delta_percent_missing, delta_percent_outdated))
         log.fatal(
             f"Data changes exceed the threshold of {max_changes_percent}%:"
@@ -35,10 +40,16 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         sys.exit(1)
 
     # Sync data
-    attio_user: Optional[AttioUser]
-    attio_person: Optional[AttioPerson]
-    attio_workspace: Optional[AttioWorkspace]
+    create_missing_workspaces(attio, workspaces_missing)
+    update_outdated_workspaces(attio, workspaces_outdated)
+    create_missing_users(attio, users_missing)
+    update_outdated_users(attio, users_outdated)
+    delete_obsolete_workspaces(attio, obsolete_workspaces)
+    delete_obsolete_users_and_people(attio, obsolete_users)
 
+
+def create_missing_workspaces(attio: AttioData, workspaces_missing: list[FixWorkspace]) -> None:
+    attio_workspace: Optional[AttioWorkspace]
     for fix_workspace in workspaces_missing:
         log.info(f"Creating workspace {fix_workspace.name}")
         try:
@@ -47,6 +58,9 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         except Exception as e:
             log.error(f"Error creating workspace {fix_workspace.name}: {e}")
 
+
+def update_outdated_workspaces(attio: AttioData, workspaces_outdated: list[FixWorkspace]) -> None:
+    attio_workspace: Optional[AttioWorkspace]
     for fix_workspace in workspaces_outdated:
         log.info(f"Updating workspace {fix_workspace.name}")
         try:
@@ -55,6 +69,10 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         except Exception as e:
             log.error(f"Error updating workspace {fix_workspace.name}: {e}")
 
+
+def create_missing_users(attio: AttioData, users_missing: list[FixUser]) -> None:
+    attio_user: Optional[AttioUser]
+    attio_person: Optional[AttioPerson]
     for user in users_missing:
         log.info(f"Asserting person {user.email}")
         try:
@@ -81,6 +99,10 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         except Exception as e:
             log.error(f"Error asserting person {user.email}: {e}")
 
+
+def update_outdated_users(attio: AttioData, users_outdated: list[FixUser]) -> None:
+    attio_user: Optional[AttioUser]
+    attio_person: Optional[AttioPerson]
     for user in users_outdated:
         attio_user = None
         for au in attio.users:
@@ -102,6 +124,9 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         except Exception as e:
             log.error(f"Error updating user {user.email}: {e}")
 
+
+def delete_obsolete_workspaces(attio: AttioData, obsolete_workspaces: list[AttioWorkspace]) -> None:
+    attio_workspace: Optional[AttioWorkspace]
     for attio_workspace in obsolete_workspaces:
         log.info(f"Deleting workspace {attio_workspace.name} ({attio_workspace.fix_workspace_id})")
         try:
@@ -109,6 +134,10 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         except Exception as e:
             log.error(f"Error deleting workspace {attio_workspace.name} ({attio_workspace.fix_workspace_id}): {e}")
 
+
+def delete_obsolete_users_and_people(attio: AttioData, obsolete_users: list[AttioUser]) -> None:
+    attio_user: Optional[AttioUser]
+    attio_person: Optional[AttioPerson]
     for attio_user in obsolete_users:
         log.info(f"Deleting user {attio_user.email} ({attio_user.user_id})")
         try:
