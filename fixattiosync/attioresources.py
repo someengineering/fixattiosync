@@ -49,17 +49,24 @@ class AttioWorkspace(AttioResource):
     tier: Optional[str]
     status: Optional[str]
     fix_workspace_id: Optional[UUID]
+    cloud_account_connected: Optional[bool]
     users: list[AttioUser] = field(default_factory=list)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
             not hasattr(other, "id")
             or not hasattr(other, "tier")
+            or not hasattr(other, "cloud_account_connected")
             or not hasattr(other, "status")
             or not isinstance(other.status, Enum)
         ):
             return False
-        return bool(self.id == other.id and self.tier == other.tier and self.status == other.status.value)
+        return bool(
+            self.id == other.id
+            and self.tier == other.tier
+            and self.status == other.status.value
+            and self.cloud_account_connected == other.cloud_account_connected
+        )
 
     @classmethod
     def make(cls: Type[Self], data: dict[str, Any]) -> Self:
@@ -84,6 +91,9 @@ class AttioWorkspace(AttioResource):
         if fix_workspace_id is None:
             log.error(f"Fix workspace ID not found for {record_id}: {data}")
 
+        cloud_account_connected_info = get_latest_value(values.get("cloud_account_connected", [{}]))
+        cloud_account_connected = cloud_account_connected_info.get("value")
+
         cls_data = {
             "id": fix_workspace_id,
             "object_id": object_id,
@@ -94,6 +104,7 @@ class AttioWorkspace(AttioResource):
             "tier": product_tier,
             "status": status,
             "fix_workspace_id": fix_workspace_id,
+            "cloud_account_connected": cloud_account_connected,
         }
 
         return cls(**cls_data)
