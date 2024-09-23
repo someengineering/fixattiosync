@@ -28,41 +28,55 @@ class AttioData:
 
         return headers
 
-    def _delete_data(
-        self, endpoint: str, json: Optional[dict[str, Any]] = None, params: Optional[dict[str, str]] = None
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, str]] = None,
     ) -> dict[str, Any]:
-        log.debug(f"Deleting data from {endpoint}")
         url = self.base_url + endpoint
-        headers = self._headers(json=True) if json else self._headers(json=False)
-        response = requests.delete(url, headers=headers, json=json, params=params)
+        headers = self._headers(json=bool(json))
+
+        action_strings = {
+            "DELETE": "Deleting data from",
+            "POST": "Posting data to",
+            "PUT": "Putting data to",
+            "GET": "Fetching data from",
+        }
+        action_str = action_strings.get(method.upper(), f"Requesting data via {method} from")
+
+        log.debug(f"{action_str} {url}")
+        response = requests.request(method, url, headers=headers, json=json, params=params)
+
         if response.status_code == 200:
             return response.json()  # type: ignore
         else:
-            raise Exception(f"Error deleting data from {url}: {response.status_code} {response.text}")
+            raise Exception(f"Error {action_str.lower()} {url}: {response.status_code} {response.text}")
+
+    def _delete_data(
+        self,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, str]] = None,
+    ) -> dict[str, Any]:
+        return self._request("DELETE", endpoint, json=json, params=params)
 
     def _post_data(
-        self, endpoint: str, json: Optional[dict[str, Any]] = None, params: Optional[dict[str, str]] = None
+        self,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, str]] = None,
     ) -> dict[str, Any]:
-        log.debug(f"Fetching data from {endpoint}")
-        url = self.base_url + endpoint
-        headers = self._headers(json=True) if json else self._headers(json=False)
-        response = requests.post(url, headers=headers, json=json, params=params)
-        if response.status_code == 200:
-            return response.json()  # type: ignore
-        else:
-            raise Exception(f"Error fetching data from {url}: {response.status_code} {response.text}")
+        return self._request("POST", endpoint, json=json, params=params)
 
     def _put_data(
-        self, endpoint: str, json: Optional[dict[str, Any]] = None, params: Optional[dict[str, str]] = None
+        self,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, str]] = None,
     ) -> dict[str, Any]:
-        log.debug(f"Putting data to {endpoint}")
-        url = self.base_url + endpoint
-        headers = self._headers(json=True) if json else self._headers(json=False)
-        response = requests.put(url, headers=headers, json=json, params=params)
-        if response.status_code == 200:
-            return response.json()  # type: ignore
-        else:
-            raise Exception(f"Error putting data to {url}: {response.status_code} {response.text}")
+        return self._request("PUT", endpoint, json=json, params=params)
 
     def delete_record(self, object_id: str, record_id: UUID) -> dict[str, Any]:
         endpoint = f"objects/{object_id}/records/{record_id}"
