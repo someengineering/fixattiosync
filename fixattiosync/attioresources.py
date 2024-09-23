@@ -189,7 +189,7 @@ class AttioUser(AttioResource):
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
-            and sorted([w.id for w in self.workspaces]) == sorted([w.id for w in other.workspaces])
+            and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
         )
 
     @classmethod
