@@ -85,6 +85,8 @@ class FixData:
                         if cloud_account.tenant_id in self.__workspaces:
                             self.__workspaces[cloud_account.tenant_id].cloud_accounts.append(cloud_account)
                             self.__workspaces[cloud_account.tenant_id].update_status()
+                        else:
+                            log.error(f"Data error: cloud account {cloud_account.id} does not have a workspace")
             except psycopg.Error as e:
                 log.error(f"Error fetching data: {e}")
                 sys.exit(2)
