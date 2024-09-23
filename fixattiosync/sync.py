@@ -33,7 +33,7 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         or delta_percent_outdated > max_changes_percent
         or delta_percent_obsolete > max_changes_percent
     ):
-        min_required_threshold = math.ceil(max(delta_percent_missing, delta_percent_outdated))
+        min_required_threshold = math.ceil(max(delta_percent_missing, delta_percent_outdated, delta_percent_obsolete))
         log.fatal(
             f"Data changes exceed the threshold of {max_changes_percent}%:"
             f" Missing: {delta_percent_missing:.2f}%, Outdated: {delta_percent_outdated:.2f}%"
