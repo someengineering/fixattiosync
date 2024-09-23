@@ -22,9 +22,18 @@ class FixUser:
     workspaces: list[FixWorkspace] = field(default_factory=list)
 
     def __eq__(self: Self, other: Any) -> bool:
-        if not hasattr(other, "id") or not hasattr(other, "email"):
+        if (
+            not hasattr(other, "id")
+            or not hasattr(other, "email")
+            or not hasattr(other, "workspaces")
+            or not isinstance(other.workspaces, list)
+        ):
             return False
-        return bool(self.id == other.id and str(self.email).lower() == str(other.email).lower())
+        return bool(
+            self.id == other.id
+            and str(self.email).lower() == str(other.email).lower()
+            and sorted([w.id for w in self.workspaces]) == sorted([w.id for w in other.workspaces])
+        )
 
     def attio_data(
         self, person: Optional[AttioPerson] = None, workspaces: Optional[list[AttioWorkspace]] = None
