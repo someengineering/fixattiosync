@@ -179,9 +179,18 @@ class AttioUser(AttioResource):
     workspaces: list[AttioWorkspace] = field(default_factory=list)
 
     def __eq__(self: Self, other: Any) -> bool:
-        if not hasattr(other, "id") or not hasattr(other, "email"):
+        if (
+            not hasattr(other, "id")
+            or not hasattr(other, "email")
+            or not hasattr(other, "workspaces")
+            or not isinstance(other.workspaces, list)
+        ):
             return False
-        return bool(self.id == other.id and str(self.email).lower() == str(other.email).lower())
+        return bool(
+            self.id == other.id
+            and str(self.email).lower() == str(other.email).lower()
+            and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
+        )
 
     @classmethod
     def make(cls: Type[Self], data: dict[str, Any]) -> Self:
