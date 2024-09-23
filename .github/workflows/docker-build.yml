@@ -58,8 +58,8 @@ jobs:
             type=sha,prefix=
             type=edge
           labels: |
-            org.opencontainers.image.title=fixbackup
-            org.opencontainers.image.description=FIX DB Backup System
+            org.opencontainers.image.title=fixattiosync
+            org.opencontainers.image.description=Fix Attio Sync
             org.opencontainers.image.vendor=Some Engineering Inc.
 
       - name: Set up QEMU
