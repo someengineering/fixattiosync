@@ -114,12 +114,14 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
         try:
             attio_person = attio_user.person
             attio.delete_record(attio_user.api_object, attio_user.record_id)
-            if len(attio_person.users) == 0:
-                log.info(f"Deleting person {attio_person.email} ({attio_person.record_id}) with no users")
-                try:
-                    attio.delete_record(attio_person.api_object, attio_person.record_id)
-                except Exception as e:
-                    log.error(f"Error deleting person {attio_person.email} ({attio_person.record_id}): {e}")
+            if attio_person is not None:
+                assert isinstance(attio_person, AttioPerson)
+                if len(attio_person.users) == 0:
+                    log.info(f"Deleting person {attio_person.email} ({attio_person.record_id}) with no users")
+                    try:
+                        attio.delete_record(attio_person.api_object, attio_person.record_id)
+                    except Exception as e:
+                        log.error(f"Error deleting person {attio_person.email} ({attio_person.record_id}): {e}")
         except Exception as e:
             log.error(f"Error deleting user {attio_user.email} ({attio_user.user_id}): {e}")
 

@@ -81,7 +81,10 @@ class AttioData:
             log.debug(f"Deleted {object_id} {record_id} in Attio, updating locally")
             attio_obj = self_store[record_id]
             if object_id == "users":
-                attio_obj.person.users.remove(attio_obj)
+                assert isinstance(attio_obj, AttioUser)
+                if attio_obj.person is not None:
+                    assert isinstance(attio_obj.person, AttioPerson)
+                    attio_obj.person.users.remove(attio_obj)
                 for workspace in attio_obj.workspaces:
                     workspace.users.remove(attio_obj)
             del self_store[record_id]
