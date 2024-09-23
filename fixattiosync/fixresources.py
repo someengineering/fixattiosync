@@ -99,6 +99,7 @@ class FixWorkspace:
     users: list[FixUser] = field(default_factory=list)
     cloud_accounts: list[FixCloudAccount] = field(default_factory=list)
     status: FixWorkspaceStatus = FixWorkspaceStatus.Created
+    cloud_account_connected: bool = False
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
@@ -106,6 +107,7 @@ class FixWorkspace:
             or not hasattr(other, "name")
             or not hasattr(other, "tier")
             or not hasattr(other, "status")
+            or not hasattr(other, "cloud_account_connected")
         ):
             return False
         return bool(
@@ -113,9 +115,12 @@ class FixWorkspace:
             and self.name == other.name
             and self.tier == other.tier
             and self.status.value == other.status
+            and self.cloud_account_connected == other.cloud_account_connected
         )
 
     def update_status(self) -> None:
+        if len(self.cloud_accounts) > 0:
+            self.cloud_account_connected = True
         if self.subscription_id is not None:
             self.status = FixWorkspaceStatus.Subscribed
             return
@@ -134,6 +139,7 @@ class FixWorkspace:
                     "name": self.name,
                     "product_tier": self.tier,
                     "status": self.status.value,
+                    "cloud_account_connected": self.cloud_account_connected,
                 }
             }
         }
