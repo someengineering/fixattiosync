@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional, Self, Type, ClassVar, Any
+from enum import Enum
 from .logger import log
 
 
@@ -51,9 +52,14 @@ class AttioWorkspace(AttioResource):
     users: list[AttioUser] = field(default_factory=list)
 
     def __eq__(self: Self, other: Any) -> bool:
-        if not hasattr(other, "id") or not hasattr(other, "tier"):
+        if (
+            not hasattr(other, "id")
+            or not hasattr(other, "tier")
+            or not hasattr(other, "status")
+            or not isinstance(other.status, Enum)
+        ):
             return False
-        return bool(self.id == other.id and self.tier == other.tier)
+        return bool(self.id == other.id and self.tier == other.tier and self.status == other.status.value)
 
     @classmethod
     def make(cls: Type[Self], data: dict[str, Any]) -> Self:
