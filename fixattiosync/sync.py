@@ -24,12 +24,14 @@ def sync_fix_to_attio(fix: FixData, attio: AttioData, max_changes_percent: int =
     delta_percent_outdated = (
         (len(users_outdated) + len(workspaces_outdated)) / (len(attio.users) + len(attio.workspaces)) * 100
     )
-    delta_obsolete = (len(obsolete_workspaces) + len(obsolete_users)) / (len(attio.users) + len(attio.workspaces)) * 100
+    delta_percent_obsolete = (
+        (len(obsolete_workspaces) + len(obsolete_users)) / (len(attio.users) + len(attio.workspaces)) * 100
+    )
 
     if (
         delta_percent_missing > max_changes_percent
         or delta_percent_outdated > max_changes_percent
-        or delta_obsolete > max_changes_percent
+        or delta_percent_obsolete > max_changes_percent
     ):
         min_required_threshold = math.ceil(max(delta_percent_missing, delta_percent_outdated))
         log.fatal(
