@@ -34,6 +34,7 @@ class AttioData:
         endpoint: str,
         json: Optional[dict[str, Any]] = None,
         params: Optional[dict[str, str]] = None,
+        timeout: int = 10,
     ) -> dict[str, Any]:
         url = self.base_url + endpoint
         headers = self._headers(json=bool(json))
@@ -47,7 +48,7 @@ class AttioData:
         action_str = action_strings.get(method.upper(), f"Requesting data via {method} from")
 
         log.debug(f"{action_str} {url}")
-        response = requests.request(method, url, headers=headers, json=json, params=params)
+        response = requests.request(method, url, headers=headers, json=json, params=params, timeout=timeout)
 
         if response.status_code == 200:
             return response.json()  # type: ignore

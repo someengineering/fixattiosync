@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 from uuid import UUID
 from argparse import ArgumentParser
 from .logger import log
-from .fixresources import FixUser, FixWorkspace, FixCloudAccount
+from .fixresources import FixUser, FixWorkspace, FixCloudAccount, FixRoles
 from typing import Optional
 
 
@@ -66,16 +66,21 @@ class FixData:
                         workspace = FixWorkspace(**row)
                         self.__workspaces[workspace.id] = workspace
                 with self.conn.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute('SELECT * FROM public."user_role_assignment";')
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        user = self.__users[row["user_id"]]
+                        workspace = self.__workspaces[row["workspace_id"]]
+                        roles = FixRoles(row["role_names"])
+                        user.workspaces.append(workspace)
+                        workspace.users.append(user)
+                        user.workspace_roles[workspace.id] = roles
+                        workspace.user_roles[user.id] = roles
+                with self.conn.cursor(row_factory=dict_row) as cursor:
                     cursor.execute('SELECT * FROM public."organization_owners";')
                     rows = cursor.fetchall()
                     for row in rows:
                         self.__workspaces[row["organization_id"]].owner = self.__users[row["user_id"]]
-                with self.conn.cursor(row_factory=dict_row) as cursor:
-                    cursor.execute('SELECT * FROM public."organization_members";')
-                    rows = cursor.fetchall()
-                    for row in rows:
-                        self.__workspaces[row["organization_id"]].users.append(self.__users[row["user_id"]])
-                        self.__users[row["user_id"]].workspaces.append(self.__workspaces[row["organization_id"]])
                 with self.conn.cursor(row_factory=dict_row) as cursor:
                     cursor.execute('SELECT * FROM public."cloud_account";')
                     rows = cursor.fetchall()
@@ -84,9 +89,12 @@ class FixData:
                         self.__cloud_accounts[cloud_account.id] = cloud_account
                         if cloud_account.tenant_id in self.__workspaces:
                             self.__workspaces[cloud_account.tenant_id].cloud_accounts.append(cloud_account)
-                            self.__workspaces[cloud_account.tenant_id].update_status()
                         else:
                             log.error(f"Data error: cloud account {cloud_account.id} does not have a workspace")
+                for workspace in self.__workspaces.values():
+                    workspace.update_info()
+                for user in self.__users.values():
+                    user.update_info()
             except psycopg.Error as e:
                 log.error(f"Error fetching data: {e}")
                 sys.exit(2)
