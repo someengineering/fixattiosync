@@ -8,10 +8,17 @@ from enum import Enum
 from .logger import log
 
 
-def get_latest_value(value: list[dict[str, Any]]) -> dict[str, Any]:
-    if value and len(value) > 0:
-        return value[0]
-    return {}
+def get_nested_field(values_dict: dict[str, Any], key: str, field_path: list[str], default: Any = None) -> Any:
+    items = values_dict.get(key, [{}])
+    if items and isinstance(items, list) and len(items) > 0:
+        data = items[0]
+        for field in field_path:
+            if isinstance(data, dict):
+                data = data.get(field, default)
+            else:
+                return default
+        return data
+    return default
 
 
 def optional_uuid(value: str) -> Optional[UUID]:
@@ -77,22 +84,13 @@ class AttioWorkspace(AttioResource):
 
         values = data.get("values", {})
 
-        name_info = get_latest_value(values.get("name", [{}]))
-        name = name_info.get("value")
-
-        product_tier_info = get_latest_value(values.get("product_tier", [{}]))
-        product_tier = product_tier_info.get("option", {}).get("title")
-
-        status_info = get_latest_value(values.get("status", [{}]))
-        status = status_info.get("status", {}).get("title")
-
-        fix_workspace_id_info = get_latest_value(values.get("workspace_id", [{}]))
-        fix_workspace_id = optional_uuid(str(fix_workspace_id_info.get("value")))
+        name = get_nested_field(values, "name", ["value"])
+        product_tier = get_nested_field(values, "product_tier", ["option", "title"])
+        status = get_nested_field(values, "status", ["status", "title"])
+        fix_workspace_id = optional_uuid(str(get_nested_field(values, "workspace_id", ["value"])))
         if fix_workspace_id is None:
             log.error(f"Fix workspace ID not found for {record_id}: {data}")
-
-        cloud_account_connected_info = get_latest_value(values.get("cloud_account_connected", [{}]))
-        cloud_account_connected = cloud_account_connected_info.get("value")
+        cloud_account_connected = get_nested_field(values, "cloud_account_connected", ["value"])
 
         cls_data = {
             "id": fix_workspace_id,
@@ -132,19 +130,12 @@ class AttioPerson(AttioResource):
 
         values = data["values"]
 
-        name_info = get_latest_value(values.get("name", [{}]))
-        full_name = name_info.get("full_name")
-        first_name = name_info.get("first_name")
-        last_name = name_info.get("last_name")
-
-        email_info = get_latest_value(values.get("email_addresses", [{}]))
-        email_address = email_info.get("email_address")
-
-        job_title_info = get_latest_value(values.get("job_title", [{}]))
-        job_title = job_title_info.get("value")
-
-        linkedin_info = get_latest_value(values.get("linkedin", [{}]))
-        linkedin = linkedin_info.get("value")
+        full_name = get_nested_field(values, "name", ["full_name"])
+        first_name = get_nested_field(values, "name", ["first_name"])
+        last_name = get_nested_field(values, "name", ["last_name"])
+        email_address = get_nested_field(values, "email_addresses", ["email_address"])
+        job_title = get_nested_field(values, "job_title", ["value"])
+        linkedin = get_nested_field(values, "linkedin", ["value"])
 
         cls_data = {
             "object_id": object_id,
@@ -216,36 +207,24 @@ class AttioUser(AttioResource):
 
         values = data.get("values", {})
 
-        email_info = get_latest_value(values.get("primary_email_address", [{}]))
-        primary_email_address = email_info.get("email_address")
+        primary_email_address = get_nested_field(values, "primary_email_address", ["email_address"])
+        status = get_nested_field(values, "status", ["status", "title"])
+        user_id = optional_uuid(str(get_nested_field(values, "user_id", ["value"])))
+        person_id = optional_uuid(str(get_nested_field(values, "person", ["target_record_id"])))
+        user_email_notifications_disabled = get_nested_field(values, "user_email_notifications_disabled", ["value"])
+        at_least_one_cloud_account_connected = get_nested_field(
+            values, "at_least_one_cloud_account_connected", ["value"]
+        )
+        is_main_user_in_at_least_one_workspace = get_nested_field(
+            values, "is_main_user_in_at_least_one_workspace", ["value"]
+        )
+        cloud_account_connected_workspace_name = get_nested_field(
+            values, "cloud_account_connected_workspace_name", ["value"]
+        )
+        workspace_has_subscription = get_nested_field(values, "workspace_has_subscription", ["value"])
 
-        status_info = get_latest_value(values.get("status", [{}]))
-        status = status_info.get("status", {}).get("title")
-
-        user_id_info = get_latest_value(values.get("user_id", [{}]))
-        user_id = optional_uuid(user_id_info["value"])
         if user_id is None:
             log.error(f"Fix user ID not found for {record_id}: {data}")
-
-        person_info = get_latest_value(values.get("person", [{}]))
-        person_id = optional_uuid(str(person_info.get("target_record_id")))
-
-        user_email_notifications_disabled_info = get_latest_value(values.get("user_email_notifications_disabled", [{}]))
-        user_email_notifications_disabled = user_email_notifications_disabled_info.get("value")
-        at_least_one_cloud_account_connected_info = get_latest_value(
-            values.get("at_least_one_cloud_account_connected", [{}])
-        )
-        at_least_one_cloud_account_connected = at_least_one_cloud_account_connected_info.get("value")
-        is_main_user_in_at_least_one_workspace_info = get_latest_value(
-            values.get("is_main_user_in_at_least_one_workspace", [{}])
-        )
-        is_main_user_in_at_least_one_workspace = is_main_user_in_at_least_one_workspace_info.get("value")
-        cloud_account_connected_workspace_name_info = get_latest_value(
-            values.get("cloud_account_connected_workspace_name", [{}])
-        )
-        cloud_account_connected_workspace_name = cloud_account_connected_workspace_name_info.get("value")
-        workspace_has_subscription_info = get_latest_value(values.get("workspace_has_subscription", [{}]))
-        workspace_has_subscription = workspace_has_subscription_info.get("value")
 
         workspace_refs = None
         workspace_info = values.get("workspace", [])
