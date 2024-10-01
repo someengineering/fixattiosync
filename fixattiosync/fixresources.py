@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional, Self, Any
-from enum import Enum
+from enum import Enum, IntFlag
 from .attioresources import AttioPerson, AttioWorkspace
 
 
@@ -20,6 +20,12 @@ class FixUser:
     created_at: datetime
     updated_at: datetime
     workspaces: list[FixWorkspace] = field(default_factory=list)
+    workspace_roles: dict[str, FixRoles] = field(default_factory=dict)
+    user_email_notifications_disabled: Optional[bool] = None
+    at_least_one_cloud_account_connected: Optional[bool] = None
+    is_main_user_in_at_least_one_workspace: Optional[bool] = None
+    cloud_account_connected_workspace_name: Optional[str] = None
+    workspace_has_subscription: Optional[bool] = None
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
@@ -27,12 +33,22 @@ class FixUser:
             or not hasattr(other, "email")
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
+            or not hasattr(other, "user_email_notifications_disabled")
+            or not hasattr(other, "at_least_one_cloud_account_connected")
+            or not hasattr(other, "is_main_user_in_at_least_one_workspace")
+            or not hasattr(other, "cloud_account_connected_workspace_name")
+            or not hasattr(other, "workspace_has_subscription")
         ):
             return False
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
             and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
+            and self.user_email_notifications_disabled == other.user_email_notifications_disabled
+            and self.at_least_one_cloud_account_connected == other.at_least_one_cloud_account_connected
+            and self.is_main_user_in_at_least_one_workspace == other.is_main_user_in_at_least_one_workspace
+            and self.cloud_account_connected_workspace_name == other.cloud_account_connected_workspace_name
+            and self.workspace_has_subscription == other.workspace_has_subscription
         )
 
     def attio_data(
@@ -46,6 +62,7 @@ class FixUser:
                     "user_id": str(self.id),
                     "primary_email_address": [{"email_address": self.email}],
                     "status": "Signed up" if self.is_active else "Invited",
+                    "demo_workspace_viewed": False,
                 }
             }
         }
@@ -63,6 +80,20 @@ class FixUser:
                         "target_record_id": str(workspace.record_id),
                     }
                 )
+        if self.user_email_notifications_disabled is not None:
+            data["data"]["values"]["email_notifications_disabled"] = self.user_email_notifications_disabled
+        if self.at_least_one_cloud_account_connected is not None:
+            data["data"]["values"]["at_least_one_cloud_account_connected"] = self.at_least_one_cloud_account_connected
+        if self.is_main_user_in_at_least_one_workspace is not None:
+            data["data"]["values"][
+                "is_main_user_in_at_least_one_workspace"
+            ] = self.is_main_user_in_at_least_one_workspace
+        if self.cloud_account_connected_workspace_name is not None:
+            data["data"]["values"][
+                "cloud_account_connected_workspace_name"
+            ] = self.cloud_account_connected_workspace_name
+        if self.workspace_has_subscription is not None:
+            data["data"]["values"]["workspace_has_subscription"] = self.workspace_has_subscription
 
         return {
             "object_id": object_id,
@@ -80,6 +111,50 @@ class FixUser:
             "data": data,
         }
 
+    def update_workspace_info(self) -> None:
+        best_workspace = None
+        for workspace in self.workspaces:
+            if self.workspace_roles[workspace.id] & (
+                FixRoles.workspace_owner | FixRoles.workspace_admin | FixRoles.workspace_billing_admin
+            ):
+                if best_workspace is None:
+                    best_workspace = workspace
+                    continue
+                if workspace.cloud_account_connected and not best_workspace.cloud_account_connected:
+                    best_workspace = workspace
+                    continue
+                best_workspace_is_configured = any(
+                    cloud_account.is_configured for cloud_account in best_workspace.cloud_accounts
+                )
+                workspace_is_configured = any(cloud_account.is_configured for cloud_account in workspace.cloud_accounts)
+                if workspace_is_configured and not best_workspace_is_configured:
+                    best_workspace = workspace
+                    continue
+                best_workspace_sum_of_last_scan_resources_scanned = sum(
+                    cloud_account.last_scan_resources_scanned for cloud_account in best_workspace.cloud_accounts
+                )
+                workspace_sum_of_last_scan_resources_scanned = sum(
+                    cloud_account.last_scan_resources_scanned for cloud_account in workspace.cloud_accounts
+                )
+                if workspace_sum_of_last_scan_resources_scanned > best_workspace_sum_of_last_scan_resources_scanned:
+                    best_workspace = workspace
+                    continue
+
+        if best_workspace is not None:
+            self.is_main_user_in_at_least_one_workspace = True
+            if best_workspace.cloud_account_connected:
+                self.at_least_one_cloud_account_connected = True
+                self.cloud_account_connected_workspace_name = best_workspace.name
+            if best_workspace.subscription_id is not None:
+                self.workspace_has_subscription = True
+            else:
+                self.workspace_has_subscription = False
+        else:
+            self.is_main_user_in_at_least_one_workspace = False
+            self.at_least_one_cloud_account_connected = False
+            self.cloud_account_connected_workspace_name = ""
+            self.workspace_has_subscription = False
+
 
 class FixWorkspaceStatus(Enum):
     Created = "Created"
@@ -87,6 +162,13 @@ class FixWorkspaceStatus(Enum):
     Collected = "Collected"
     Subscribed = "Subscribed"
     Unsubscribed = "Unsubscribed"
+
+
+class FixRoles(IntFlag):
+    workspace_member = 1 << 0
+    workspace_admin = 1 << 1
+    workspace_owner = 1 << 2
+    workspace_billing_admin = 1 << 3
 
 
 @dataclass
@@ -109,6 +191,7 @@ class FixWorkspace:
     cloud_accounts: list[FixCloudAccount] = field(default_factory=list)
     status: FixWorkspaceStatus = FixWorkspaceStatus.Created
     cloud_account_connected: bool = False
+    user_roles: dict[str, FixRoles] = field(default_factory=dict)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (

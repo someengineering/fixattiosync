@@ -177,6 +177,11 @@ class AttioUser(AttioResource):
     workspace_refs: Optional[list[UUID]] = None
     person: Optional[AttioPerson] = None
     workspaces: list[AttioWorkspace] = field(default_factory=list)
+    user_email_notifications_disabled: Optional[bool] = None
+    at_least_one_cloud_account_connected: Optional[bool] = None
+    is_main_user_in_at_least_one_workspace: Optional[bool] = None
+    cloud_account_connected_workspace_name: Optional[str] = None
+    workspace_has_subscription: Optional[bool] = None
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
@@ -184,12 +189,22 @@ class AttioUser(AttioResource):
             or not hasattr(other, "email")
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
+            or not hasattr(other, "user_email_notifications_disabled")
+            or not hasattr(other, "at_least_one_cloud_account_connected")
+            or not hasattr(other, "is_main_user_in_at_least_one_workspace")
+            or not hasattr(other, "cloud_account_connected_workspace_name")
+            or not hasattr(other, "workspace_has_subscription")
         ):
             return False
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
             and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
+            and self.user_email_notifications_disabled == other.user_email_notifications_disabled
+            and self.at_least_one_cloud_account_connected == other.at_least_one_cloud_account_connected
+            and self.is_main_user_in_at_least_one_workspace == other.is_main_user_in_at_least_one_workspace
+            and self.cloud_account_connected_workspace_name == other.cloud_account_connected_workspace_name
+            and self.workspace_has_subscription == other.workspace_has_subscription
         )
 
     @classmethod
@@ -215,6 +230,23 @@ class AttioUser(AttioResource):
         person_info = get_latest_value(values.get("person", [{}]))
         person_id = optional_uuid(str(person_info.get("target_record_id")))
 
+        user_email_notifications_disabled_info = get_latest_value(values.get("user_email_notifications_disabled", [{}]))
+        user_email_notifications_disabled = user_email_notifications_disabled_info.get("value")
+        at_least_one_cloud_account_connected_info = get_latest_value(
+            values.get("at_least_one_cloud_account_connected", [{}])
+        )
+        at_least_one_cloud_account_connected = at_least_one_cloud_account_connected_info.get("value")
+        is_main_user_in_at_least_one_workspace_info = get_latest_value(
+            values.get("is_main_user_in_at_least_one_workspace", [{}])
+        )
+        is_main_user_in_at_least_one_workspace = is_main_user_in_at_least_one_workspace_info.get("value")
+        cloud_account_connected_workspace_name_info = get_latest_value(
+            values.get("cloud_account_connected_workspace_name", [{}])
+        )
+        cloud_account_connected_workspace_name = cloud_account_connected_workspace_name_info.get("value")
+        workspace_has_subscription_info = get_latest_value(values.get("workspace_has_subscription", [{}]))
+        workspace_has_subscription = workspace_has_subscription_info.get("value")
+
         workspace_refs = None
         workspace_info = values.get("workspace", [])
         for workspace in workspace_info:
@@ -236,6 +268,11 @@ class AttioUser(AttioResource):
             "user_id": user_id,
             "person_id": person_id,
             "workspace_refs": workspace_refs,
+            "user_email_notifications_disabled": user_email_notifications_disabled,
+            "at_least_one_cloud_account_connected": at_least_one_cloud_account_connected,
+            "is_main_user_in_at_least_one_workspace": is_main_user_in_at_least_one_workspace,
+            "cloud_account_connected_workspace_name": cloud_account_connected_workspace_name,
+            "workspace_has_subscription": workspace_has_subscription,
         }
 
         return cls(**cls_data)
