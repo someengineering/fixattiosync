@@ -12,9 +12,9 @@ def get_nested_field(values_dict: dict[str, Any], key: str, field_path: list[str
     items = values_dict.get(key, [{}])
     if items and isinstance(items, list) and len(items) > 0:
         data = items[0]
-        for field in field_path:
+        for f in field_path:
             if isinstance(data, dict):
-                data = data.get(field, default)
+                data = data.get(f, default)
             else:
                 return default
         return data
