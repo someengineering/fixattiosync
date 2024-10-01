@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional, Self, Type, ClassVar, Any
 from enum import Enum
@@ -150,7 +150,7 @@ class AttioPerson(AttioResource):
             "linkedin": linkedin,
         }
 
-        return cls(**cls_data)  # type: ignore
+        return cls(**cls_data)
 
 
 @dataclass
@@ -178,6 +178,9 @@ class AttioUser(AttioResource):
         if (
             not hasattr(other, "id")
             or not hasattr(other, "email")
+            or not hasattr(other, "registered_at")
+            or not isinstance(self.registered_at, datetime)
+            or not isinstance(other.registered_at, datetime)
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
             or not hasattr(other, "user_email_notifications_disabled")
@@ -190,6 +193,7 @@ class AttioUser(AttioResource):
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
+            and self.registered_at.astimezone(timezone.utc) == other.registered_at.astimezone(timezone.utc)
             and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
             and self.user_email_notifications_disabled == other.user_email_notifications_disabled
             and self.at_least_one_cloud_account_connected == other.at_least_one_cloud_account_connected
@@ -203,9 +207,13 @@ class AttioUser(AttioResource):
         object_id = UUID(data["id"]["object_id"])
         record_id = UUID(data["id"]["record_id"])
         workspace_id = UUID(data["id"]["workspace_id"])
-        created_at = datetime.fromisoformat(data["created_at"].rstrip("Z"))
+        created_at = datetime.fromisoformat(data["created_at"])
 
         values = data.get("values", {})
+
+        registered_at = get_nested_field(values, "registered_at", ["value"])
+        if registered_at:
+            registered_at = datetime.fromisoformat(registered_at).replace(microsecond=0)
 
         primary_email_address = get_nested_field(values, "primary_email_address", ["email_address"])
         status = get_nested_field(values, "status", ["status", "title"])
@@ -242,7 +250,7 @@ class AttioUser(AttioResource):
             "created_at": created_at,
             "demo_workspace_viewed": None,
             "email": primary_email_address,
-            "registered_at": None,
+            "registered_at": registered_at,
             "status": status,
             "user_id": user_id,
             "person_id": person_id,

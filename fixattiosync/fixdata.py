@@ -92,9 +92,9 @@ class FixData:
                         else:
                             log.error(f"Data error: cloud account {cloud_account.id} does not have a workspace")
                 for workspace in self.__workspaces.values():
-                    workspace.update_status()
+                    workspace.update_info()
                 for user in self.__users.values():
-                    user.update_workspace_info()
+                    user.update_info()
             except psycopg.Error as e:
                 log.error(f"Error fetching data: {e}")
                 sys.exit(2)

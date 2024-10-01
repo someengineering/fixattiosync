@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional, Self, Any
 from enum import Enum, IntFlag
@@ -20,17 +20,24 @@ class FixUser:
     created_at: datetime
     updated_at: datetime
     workspaces: list[FixWorkspace] = field(default_factory=list)
-    workspace_roles: dict[str, FixRoles] = field(default_factory=dict)
+    workspace_roles: dict[UUID, FixRoles] = field(default_factory=dict)
     user_email_notifications_disabled: Optional[bool] = None
     at_least_one_cloud_account_connected: Optional[bool] = None
     is_main_user_in_at_least_one_workspace: Optional[bool] = None
     cloud_account_connected_workspace_name: Optional[str] = None
     workspace_has_subscription: Optional[bool] = None
+    registered_at: Optional[datetime] = None
+
+    def __post_init__(self) -> None:
+        self.registered_at = self.created_at.replace(microsecond=0)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
             not hasattr(other, "id")
             or not hasattr(other, "email")
+            or not hasattr(other, "registered_at")
+            or not isinstance(self.registered_at, datetime)
+            or not isinstance(other.registered_at, datetime)
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
             or not hasattr(other, "user_email_notifications_disabled")
@@ -43,6 +50,7 @@ class FixUser:
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
+            and self.registered_at.astimezone(timezone.utc) == other.registered_at.astimezone(timezone.utc)
             and {w.id for w in self.workspaces} == {w.id for w in other.workspaces}
             and self.user_email_notifications_disabled == other.user_email_notifications_disabled
             and self.at_least_one_cloud_account_connected == other.at_least_one_cloud_account_connected
@@ -56,6 +64,7 @@ class FixUser:
     ) -> dict[str, Any]:
         object_id = "users"
         matching_attribute = "user_id"
+        assert isinstance(self.registered_at, datetime)
         data: dict[str, Any] = {
             "data": {
                 "values": {
@@ -63,6 +72,7 @@ class FixUser:
                     "primary_email_address": [{"email_address": self.email}],
                     "status": "Signed up" if self.is_active else "Invited",
                     "demo_workspace_viewed": False,
+                    "registered_at": self.registered_at.isoformat(),
                 }
             }
         }
@@ -111,7 +121,7 @@ class FixUser:
             "data": data,
         }
 
-    def update_workspace_info(self) -> None:
+    def update_info(self) -> None:
         best_workspace = None
         for workspace in self.workspaces:
             if self.workspace_roles[workspace.id] & (
@@ -191,7 +201,7 @@ class FixWorkspace:
     cloud_accounts: list[FixCloudAccount] = field(default_factory=list)
     status: FixWorkspaceStatus = FixWorkspaceStatus.Created
     cloud_account_connected: bool = False
-    user_roles: dict[str, FixRoles] = field(default_factory=dict)
+    user_roles: dict[UUID, FixRoles] = field(default_factory=dict)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
@@ -210,7 +220,7 @@ class FixWorkspace:
             and self.cloud_account_connected == other.cloud_account_connected
         )
 
-    def update_status(self) -> None:
+    def update_info(self) -> None:
         if len(self.cloud_accounts) > 0:
             self.cloud_account_connected = True
         if self.subscription_id is not None:
