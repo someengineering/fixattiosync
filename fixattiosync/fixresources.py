@@ -19,6 +19,9 @@ class FixUser:
     is_mfa_active: Optional[bool]
     created_at: datetime
     updated_at: datetime
+    last_login: Optional[datetime] = None
+    last_active: Optional[datetime] = None
+    auth_min_time: Optional[datetime] = None
     workspaces: list[FixWorkspace] = field(default_factory=list)
     workspace_roles: dict[UUID, FixRoles] = field(default_factory=dict)
     user_email_notifications_disabled: Optional[bool] = None
