@@ -162,6 +162,7 @@ class AttioUser(AttioResource):
     demo_workspace_viewed: Optional[bool]
     email: Optional[str]
     registered_at: Optional[datetime]
+    last_active_at: Optional[datetime]
     status: Optional[str]
     user_id: Optional[UUID]
     person_id: Optional[UUID]
@@ -183,6 +184,7 @@ class AttioUser(AttioResource):
             or not isinstance(other.registered_at, datetime)
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
+            or not hasattr(other, "last_active_at")
             or not hasattr(other, "user_email_notifications_disabled")
             or not hasattr(other, "at_least_one_cloud_account_connected")
             or not hasattr(other, "is_main_user_in_at_least_one_workspace")
@@ -190,6 +192,12 @@ class AttioUser(AttioResource):
             or not hasattr(other, "workspace_has_subscription")
         ):
             return False
+        self_last_active_at = None
+        other_last_active_at = None
+        if self.last_active_at is not None:
+            self_last_active_at = self.last_active_at.astimezone(timezone.utc)
+        if other.last_active_at is not None:
+            other_last_active_at = other.last_active_at.astimezone(timezone.utc)
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
@@ -200,6 +208,7 @@ class AttioUser(AttioResource):
             and self.is_main_user_in_at_least_one_workspace == other.is_main_user_in_at_least_one_workspace
             and self.cloud_account_connected_workspace_name == other.cloud_account_connected_workspace_name
             and self.workspace_has_subscription == other.workspace_has_subscription
+            and self_last_active_at == other_last_active_at
         )
 
     @classmethod
@@ -214,6 +223,10 @@ class AttioUser(AttioResource):
         registered_at = get_nested_field(values, "registered_at", ["value"])
         if registered_at:
             registered_at = datetime.fromisoformat(registered_at).replace(microsecond=0)
+
+        last_active_at = get_nested_field(values, "last_active_at", ["value"])
+        if last_active_at:
+            last_active_at = datetime.fromisoformat(last_active_at).replace(microsecond=0)
 
         primary_email_address = get_nested_field(values, "primary_email_address", ["email_address"])
         status = get_nested_field(values, "status", ["status", "title"])
@@ -251,6 +264,7 @@ class AttioUser(AttioResource):
             "demo_workspace_viewed": None,
             "email": primary_email_address,
             "registered_at": registered_at,
+            "last_active_at": last_active_at,
             "status": status,
             "user_id": user_id,
             "person_id": person_id,

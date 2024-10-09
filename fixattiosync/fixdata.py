@@ -54,7 +54,7 @@ class FixData:
         if self.conn is not None:
             try:
                 with self.conn.cursor(row_factory=dict_row) as cursor:
-                    cursor.execute('SELECT * FROM public."user";')
+                    cursor.execute('SELECT * FROM public."user" WHERE is_active=true;')
                     rows = cursor.fetchall()
                     for row in rows:
                         user = FixUser(**row)
@@ -69,6 +69,8 @@ class FixData:
                     cursor.execute('SELECT * FROM public."user_role_assignment";')
                     rows = cursor.fetchall()
                     for row in rows:
+                        if row["user_id"] not in self.__users or row["workspace_id"] not in self.__workspaces:
+                            continue
                         user = self.__users[row["user_id"]]
                         workspace = self.__workspaces[row["workspace_id"]]
                         roles = FixRoles(row["role_names"])

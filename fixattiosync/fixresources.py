@@ -19,6 +19,9 @@ class FixUser:
     is_mfa_active: Optional[bool]
     created_at: datetime
     updated_at: datetime
+    last_login: Optional[datetime] = None
+    last_active: Optional[datetime] = None
+    auth_min_time: Optional[datetime] = None
     workspaces: list[FixWorkspace] = field(default_factory=list)
     workspace_roles: dict[UUID, FixRoles] = field(default_factory=dict)
     user_email_notifications_disabled: Optional[bool] = None
@@ -27,9 +30,12 @@ class FixUser:
     cloud_account_connected_workspace_name: Optional[str] = None
     workspace_has_subscription: Optional[bool] = None
     registered_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
 
     def __post_init__(self) -> None:
         self.registered_at = self.created_at.replace(microsecond=0)
+        if self.last_active is not None:
+            self.last_active_at = self.last_active.replace(microsecond=0)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
@@ -40,6 +46,7 @@ class FixUser:
             or not isinstance(other.registered_at, datetime)
             or not hasattr(other, "workspaces")
             or not isinstance(other.workspaces, list)
+            or not hasattr(other, "last_active_at")
             or not hasattr(other, "user_email_notifications_disabled")
             or not hasattr(other, "at_least_one_cloud_account_connected")
             or not hasattr(other, "is_main_user_in_at_least_one_workspace")
@@ -47,6 +54,12 @@ class FixUser:
             or not hasattr(other, "workspace_has_subscription")
         ):
             return False
+        self_last_active_at = None
+        other_last_active_at = None
+        if self.last_active_at is not None:
+            self_last_active_at = self.last_active_at.astimezone(timezone.utc)
+        if other.last_active_at is not None:
+            other_last_active_at = other.last_active_at.astimezone(timezone.utc)
         return bool(
             self.id == other.id
             and str(self.email).lower() == str(other.email).lower()
@@ -57,6 +70,7 @@ class FixUser:
             and self.is_main_user_in_at_least_one_workspace == other.is_main_user_in_at_least_one_workspace
             and self.cloud_account_connected_workspace_name == other.cloud_account_connected_workspace_name
             and self.workspace_has_subscription == other.workspace_has_subscription
+            and self_last_active_at == other_last_active_at
         )
 
     def attio_data(
@@ -90,6 +104,8 @@ class FixUser:
                         "target_record_id": str(workspace.record_id),
                     }
                 )
+        if self.last_active_at is not None:
+            data["data"]["values"]["last_active_at"] = self.last_active_at.isoformat()
         if self.user_email_notifications_disabled is not None:
             data["data"]["values"]["email_notifications_disabled"] = self.user_email_notifications_disabled
         if self.at_least_one_cloud_account_connected is not None:
