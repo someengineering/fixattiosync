@@ -224,7 +224,7 @@ class AttioUser(AttioResource):
         if registered_at:
             registered_at = datetime.fromisoformat(registered_at).replace(microsecond=0)
 
-        last_active_at = get_nested_field(values, "last_active_at", ["value"])
+        last_active_at = get_nested_field(values, "last_activity_3", ["value"])
         if last_active_at:
             last_active_at = datetime.fromisoformat(last_active_at).replace(microsecond=0)
 
