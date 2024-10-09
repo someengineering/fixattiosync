@@ -34,7 +34,8 @@ class FixUser:
 
     def __post_init__(self) -> None:
         self.registered_at = self.created_at.replace(microsecond=0)
-        self.last_active_at = self.last_active.replace(microsecond=0)
+        if self.last_active is not None:
+            self.last_active_at = self.last_active.replace(microsecond=0)
 
     def __eq__(self: Self, other: Any) -> bool:
         if (
