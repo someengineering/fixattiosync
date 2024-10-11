@@ -24,7 +24,7 @@ class FixUser:
     auth_min_time: Optional[datetime] = None
     workspaces: list[FixWorkspace] = field(default_factory=list)
     workspace_roles: dict[UUID, FixRoles] = field(default_factory=dict)
-    user_email_notifications_disabled: Optional[bool] = None
+    user_email_notifications_disabled: Optional[bool] = False
     at_least_one_cloud_account_connected: Optional[bool] = None
     is_main_user_in_at_least_one_workspace: Optional[bool] = None
     cloud_account_connected_workspace_name: Optional[str] = None
@@ -107,7 +107,7 @@ class FixUser:
         if self.last_active_at is not None:
             data["data"]["values"]["last_activity_3"] = self.last_active_at.isoformat()
         if self.user_email_notifications_disabled is not None:
-            data["data"]["values"]["email_notifications_disabled"] = self.user_email_notifications_disabled
+            data["data"]["values"]["user_email_notifications_disabled"] = self.user_email_notifications_disabled
         if self.at_least_one_cloud_account_connected is not None:
             data["data"]["values"]["at_least_one_cloud_account_connected"] = self.at_least_one_cloud_account_connected
         if self.is_main_user_in_at_least_one_workspace is not None:
