@@ -1,6 +1,6 @@
 [project]
 name = "fixattiosync"
-version = "0.0.17"
+version = "0.0.18"
 authors = [{name="Some Engineering Inc."}]
 description = "Fix Attio Sync"
 license = {file="LICENSE"}

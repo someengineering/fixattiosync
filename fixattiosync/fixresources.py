@@ -31,6 +31,7 @@ class FixUser:
     workspace_has_subscription: Optional[bool] = None
     registered_at: Optional[datetime] = None
     last_active_at: Optional[datetime] = None
+    notification_settings: Optional[FixUserNotificationSettings] = None
 
     def __post_init__(self) -> None:
         self.registered_at = self.created_at.replace(microsecond=0)
@@ -138,6 +139,8 @@ class FixUser:
         }
 
     def update_info(self) -> None:
+        if self.notification_settings is not None:
+            self.user_email_notifications_disabled = not self.notification_settings.marketing
         best_workspace = None
         for workspace in self.workspaces:
             if self.workspace_roles[workspace.id] & (
@@ -299,3 +302,14 @@ class FixCloudAccount:
     azure_credential_id: Optional[UUID]
     last_scan_resources_errors: int
     last_degraded_scan_started_at: Optional[datetime]
+
+
+@dataclass
+class FixUserNotificationSettings:
+    user_id: UUID
+    weekly_report: bool
+    inactivity_reminder: bool
+    tutorial: bool
+    marketing: bool
+    created_at: datetime
+    updated_at: datetime

@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 from uuid import UUID
 from argparse import ArgumentParser
 from .logger import log
-from .fixresources import FixUser, FixWorkspace, FixCloudAccount, FixRoles
+from .fixresources import FixUser, FixWorkspace, FixCloudAccount, FixRoles, FixUserNotificationSettings
 from typing import Optional
 
 
@@ -83,6 +83,15 @@ class FixData:
                     rows = cursor.fetchall()
                     for row in rows:
                         self.__workspaces[row["organization_id"]].owner = self.__users[row["user_id"]]
+                with self.conn.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute('SELECT * FROM public."user_notification_settings";')
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        if row["user_id"] in self.__users:
+                            user = self.__users[row["user_id"]]
+                            user.notification_settings = FixUserNotificationSettings(**row)
+                        else:
+                            log.error(f"Data error: notification settings for user {row['user_id']} not found")
                 with self.conn.cursor(row_factory=dict_row) as cursor:
                     cursor.execute('SELECT * FROM public."cloud_account";')
                     rows = cursor.fetchall()
