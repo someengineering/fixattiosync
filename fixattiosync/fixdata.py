@@ -90,8 +90,6 @@ class FixData:
                         if row["user_id"] in self.__users:
                             user = self.__users[row["user_id"]]
                             user.notification_settings = FixUserNotificationSettings(**row)
-                        else:
-                            log.error(f"Data error: notification settings for user {row['user_id']} not found")
                 with self.conn.cursor(row_factory=dict_row) as cursor:
                     cursor.execute('SELECT * FROM public."cloud_account";')
                     rows = cursor.fetchall()
